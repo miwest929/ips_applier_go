@@ -5,22 +5,23 @@ import (
 	"log"
 	"fmt"
 	"bytes"
+	"encoding/binary"
 )
 
 type NormalChunk struct {
-	offset        []byte
-	dataLength    []byte
-	data          []byte
+	offset        uint64
+	dataLength    uint64
+	data          uint64
 }
 
 type RunLengthEncodingChunk struct {
-	offset           []byte
-	valueRepeatCount []byte
-	value            byte
+	offset           uint64
+	valueRepeatCount uint64
+	value            uint64
 }
 
-func getNextChunk(f *os.File) []byte {
-	chunk := make([]byte, 5)
+func getNextBytes(f *os.File, byteCount uint64) []byte {
+	chunk := make([]byte, byteCount)
 	bytesRead, err := f.Read(chunk)
 	if err != nil {
 		log.Fatal(err)
@@ -50,15 +51,20 @@ func isEofMarker(nextBytes []byte) bool {
 	return false
 }
 
+func convertByteArrayToUint64(bytes []byte) uint64 {
+	return binary.BigEndian.Uint64(bytes)
+}
+
 func createNormalChunk(nextBytes []byte) *NormalChunk {
-	normalChunk := NormalChunk{offset: nextBytes[0:3], dataLength: nextBytes[3:5]}
+	normalChunk := NormalChunk{offset: convertByteArrayToUint64(nextBytes[0:3]), dataLength: convertByteArrayToUint64(nextBytes[3:5])}
 	// normalChunk.data = <next-data-Length>
 	return &normalChunk
 }
 
-// func createRunLengthEncodingChunk(nextBytes []byte) RunLengthEncodingChunk {
-	
-// }
+func createRunLengthEncodingChunk(nextBytes []byte) *RunLengthEncodingChunk {
+	rleChunk := RunLengthEncodingChunk{offset: convertByteArrayToUint64(nextBytes[0:3])}
+	return &rleChunk
+}
 
 func ReadIpsFile(ipsFile string) {
 	startingBytes := []byte{0x50, 0x41, 0x54, 0x43, 0x48}
@@ -81,15 +87,25 @@ func ReadIpsFile(ipsFile string) {
 		log.Fatal("The header bytes are incorrect")
 	}
 
-	chunk := getNextChunk(f)
-	for !isEofMarker(chunk) {
-		chunk = getNextChunk(f)
+	bytes := getNextBytes(f, 5)
+	for !isEofMarker(bytes) {
+		if (isRunLengthEncoded(bytes)) {
+			createRunLengthEncodingChunk := createRunLengthEncodingChunk(bytes)
 
-		if (isRunLengthEncoded(chunk)) {
+			bytes := getNextBytes(f, 2)
+			// count := binary.BigEndian.Uint64(repeatedValueBytes)
+			createRunLengthEncodingChunk.valueRepeatCount = convertByteArrayToUint64(bytes)
 
+			bytes = getNextBytes(f, 1)
+			createRunLengthEncodingChunk.value = convertByteArrayToUint64(bytes)
 		} else {
+			normalChunk := createNormalChunk(bytes)
+			// convertByteArrayToUint64
+			byte = getNextBytes(f, normalChunk.dataLength)
 
 		}
+
+		
 	}
 
 	f.Close();
