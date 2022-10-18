@@ -18,12 +18,8 @@ type RunLengthEncodingChunk struct { offset, valueRepeatCount, value uint32 }
 
 func getNextBytes(f *os.File, byteCount int) []byte {
 	bytes := make([]byte, byteCount)
-	bytesRead, err := f.Read(bytes)
+	_, err := f.Read(bytes)
 	if err != nil {
-		log.Fatal(err)
-	}
-
-	if bytesRead != byteCount {
 		log.Fatal(err)
 	}
 
