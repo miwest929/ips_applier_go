@@ -74,7 +74,8 @@ func createRunLengthEncodingChunk(nextBytes []byte) *RunLengthEncodingChunk {
 	return &rleChunk
 }
 
-func ReadIpsFile(ipsFile string) {
+func ReadIpsFile(ipsFile string) []interface{} {
+	var chunks []interface{}
 	startingBytes := []byte{0x50, 0x41, 0x54, 0x43, 0x48}
 
 	f, err := os.Open(ipsFile)
@@ -106,12 +107,14 @@ func ReadIpsFile(ipsFile string) {
 			bytes = getNextBytes(f, 1)
 			rleChunk.value = convertByteArrayToUint32(bytes)
 
+			chunks = append(chunks, rleChunk)
 			fmt.Printf("RunLengthEncodedChunk { offset=%d valueRepeatCount=%d value=%d}\n", rleChunk.offset, rleChunk.valueRepeatCount, rleChunk.value)
 		} else {
 			normalChunk := createNormalChunk(bytes)
 			bytes = getNextBytes(f, int(normalChunk.dataLength))
 			normalChunk.data = bytes
 
+			chunks = append(chunks, normalChunk)
 			fmt.Printf("NormalChunk { offset=%d dataLength=%d data=[% x]}\n", normalChunk.offset, normalChunk.dataLength, normalChunk.data)
 		}
 
@@ -119,4 +122,6 @@ func ReadIpsFile(ipsFile string) {
 	}
 
 	f.Close();
+
+	return chunks
 }
